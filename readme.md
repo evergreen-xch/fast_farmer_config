@@ -1,4 +1,4 @@
-[![CI](https://github.com/GalactechsLLC/fast_farmer_config/actions/workflows/ci.yml/badge.svg)](https://github.com/GalactechsLLC/fast_farmer_config/actions/workflows/ci.yml)
+[![CI](https://github.com/evergreen-xch/fast_farmer_config/actions/workflows/ci.yml/badge.svg)](https://github.com/evergreen-xch/fast_farmer_config/actions/workflows/ci.yml)
 
 A Config Generator for FastFarmer Gigahorse
 =====
