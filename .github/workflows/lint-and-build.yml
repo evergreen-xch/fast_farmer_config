@@ -1,0 +1,64 @@
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run Format
+        run: cargo fmt --all -- --check
+      - name: Run Clippy
+        run: cargo clippy -- -Dwarnings
+  windows_build:
+    needs: lint
+    runs-on: windows-2022
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build FastFarmerConfig
+        run: cargo build --release
+      - name: Save release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ff_config-x86_64-windows
+          path: target/release/ff_config.exe
+          if-no-files-found: error
+  build_linux_arm64:
+    name: build_linux_arm64
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker BuildX
+        uses: docker/setup-buildx-action@v3
+      - name: Build FastFarmerConfig
+        run: docker buildx build --ulimit nofile=1024000:1024000 --platform linux/arm64 --target=bins . -o "./output_bins"
+      - name: Save release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ff_config-linux-arm64
+          path: output_bins/ff_config
+          if-no-files-found: error
+  build_linux_x64:
+    name: Build_Linux_x64
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker BuildX
+        uses: docker/setup-buildx-action@v3
+      - name: Build FastFarmerConfig
+        run: docker buildx build --ulimit nofile=1024000:1024000 --platform linux/amd64 --target=bins . -o "./output_bins"
+      - name: Save release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ff_config-linux-x64
+          path: output_bins/ff_config
+          if-no-files-found: error
