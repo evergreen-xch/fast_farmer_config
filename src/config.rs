@@ -1,4 +1,4 @@
-use dg_xch_core::blockchain::sized_bytes::{Bytes32};
+use dg_xch_core::blockchain::sized_bytes::Bytes32;
 use dg_xch_core::config::PoolWalletConfig;
 use std::fs;
 use std::io::{Error, ErrorKind};

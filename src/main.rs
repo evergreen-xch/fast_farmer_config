@@ -1,29 +1,37 @@
+use crate::config::{Config, FarmingInfo, GigahorseHarvesterConfig};
+use crate::prompts::{
+    prompt_for_farming_fullnode, prompt_for_farming_port, prompt_for_launcher_id,
+    prompt_for_mnemonic, prompt_for_payout_address, prompt_for_plot_directories,
+    prompt_for_rpc_fullnode, prompt_for_rpc_port, prompt_for_ssl_path,
+};
+use clap::Parser;
+use dg_xch_cli::wallets::plotnft_utils::{get_plotnft_by_launcher_id, scrounge_for_plotnfts};
+use dg_xch_clients::rpc::full_node::FullnodeClient;
+use dg_xch_clients::ClientSSLConfig;
+use dg_xch_core::blockchain::sized_bytes::{Bytes32, Bytes48};
+use dg_xch_core::config::PoolWalletConfig;
+use dg_xch_core::consensus::constants::CONSENSUS_CONSTANTS_MAP;
+use dg_xch_core::ssl::create_all_ssl;
+use dg_xch_keys::{
+    key_from_mnemonic, master_sk_to_farmer_sk, master_sk_to_pool_sk,
+    master_sk_to_pooling_authentication_sk, master_sk_to_singleton_owner_sk,
+    master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened,
+};
+use dg_xch_puzzles::clvm_puzzles::launcher_id_to_p2_puzzle_hash;
+use dg_xch_puzzles::p2_delegated_puzzle_or_hidden_puzzle::puzzle_hash_for_pk;
+use dialoguer::Confirm;
+use home::home_dir;
+use log::{info, warn, LevelFilter};
+use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::env;
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use dg_xch_core::blockchain::sized_bytes::{Bytes32, Bytes48};
-use clap::{Parser};
-use dg_xch_cli::wallets::plotnft_utils::{get_plotnft_by_launcher_id, scrounge_for_plotnfts};
-use dg_xch_clients::ClientSSLConfig;
-use dg_xch_clients::rpc::full_node::FullnodeClient;
-use dg_xch_core::config::PoolWalletConfig;
-use dg_xch_core::consensus::constants::CONSENSUS_CONSTANTS_MAP;
-use dg_xch_core::ssl::create_all_ssl;
-use dg_xch_keys::{key_from_mnemonic, master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_pooling_authentication_sk, master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened};
-use dg_xch_puzzles::clvm_puzzles::launcher_id_to_p2_puzzle_hash;
-use dg_xch_puzzles::p2_delegated_puzzle_or_hidden_puzzle::puzzle_hash_for_pk;
-use dialoguer::Confirm;
-use home::home_dir;
-use log::{info, LevelFilter, warn};
-use simple_logger::SimpleLogger;
 use tokio::fs::create_dir_all;
-use crate::config::{Config, FarmingInfo, GigahorseHarvesterConfig};
-use crate::prompts::{prompt_for_farming_fullnode, prompt_for_farming_port, prompt_for_launcher_id, prompt_for_mnemonic, prompt_for_payout_address, prompt_for_plot_directories, prompt_for_rpc_fullnode, prompt_for_rpc_port, prompt_for_ssl_path};
 
-mod prompts;
 mod config;
+mod prompts;
 
 pub static PRIVATE_CRT: &str = "farmer/private_farmer.crt";
 pub static PRIVATE_KEY: &str = "farmer/private_farmer.key";
@@ -63,7 +71,7 @@ async fn main() -> Result<(), Error> {
         plot_directories: cli.plot_directories,
         additional_headers: None,
     })
-        .await?;
+    .await?;
     Ok(())
 }
 
@@ -133,17 +141,17 @@ pub async fn generate_config_from_mnemonic(gen_settings: GenerateConfig) -> Resu
     if let Some(op) = &gen_settings.output_path {
         if op.exists()
             && !Confirm::new()
-            .with_prompt(format!(
-                "An existing config exists at {:?}, would you like to override it? (Y/N)",
-                op
-            ))
-            .interact()
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Interrupted,
-                    format!("Dialog Interrupted: {:?}", e),
-                )
-            })?
+                .with_prompt(format!(
+                    "An existing config exists at {:?}, would you like to override it? (Y/N)",
+                    op
+                ))
+                .interact()
+                .map_err(|e| {
+                    Error::new(
+                        ErrorKind::Interrupted,
+                        format!("Dialog Interrupted: {:?}", e),
+                    )
+                })?
         {
             return Err(Error::new(ErrorKind::Interrupted, "User Canceled"));
         }
@@ -243,9 +251,7 @@ pub async fn generate_config_from_mnemonic(gen_settings: GenerateConfig) -> Resu
     //
     if let Some(launcher_id) = prompt_for_launcher_id(gen_settings.launcher_id)? {
         info!("Searching for NFT with LauncherID: {launcher_id}");
-        if let Some(plotnft) =
-            get_plotnft_by_launcher_id(client.clone(), &launcher_id).await?
-        {
+        if let Some(plotnft) = get_plotnft_by_launcher_id(client.clone(), &launcher_id).await? {
             plotnfts.push(plotnft);
         } else {
             return Err(Error::new(
@@ -381,5 +387,6 @@ pub fn is_community_node(config: &Config) -> bool {
         "chia-proxy.galactechs.com",
         "chia-proxy-testnet11.evergreenminer-prod.com",
         "chia-proxy-testnet11.galactechs.com",
-    ].contains(&config.fullnode_rpc_host.to_ascii_lowercase().trim())
+    ]
+    .contains(&config.fullnode_rpc_host.to_ascii_lowercase().trim())
 }
