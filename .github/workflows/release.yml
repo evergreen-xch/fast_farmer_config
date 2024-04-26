@@ -9,12 +9,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-and-build:
-    name: Lint and Build
-    uses: ./.github/workflows/lint-and-build.yml
   publish-release:
     name: Publish release
-    needs: lint-and-build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -37,4 +33,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ steps.tag.outputs.TAG }} ff-*.zip
+          gh release upload ${{ steps.tag.outputs.TAG }} ff_config-*.zip
